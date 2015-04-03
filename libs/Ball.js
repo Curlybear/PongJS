@@ -1,7 +1,7 @@
 "use strict";
 
 var Ball = function(position, velocity, radius,
-        velocityIncreaseRate, velocityIncreaseDelay, platform) {
+        velocityIncreaseRate, velocityIncreaseDelay, platform, platformAI) {
     // Center of the ball
     this.position = position;
     // Velocity of the ball (in unit per ms)
@@ -14,6 +14,7 @@ var Ball = function(position, velocity, radius,
     this.velocityIncreaseDelay = velocityIncreaseDelay;
     // The plateform (needed for collision handling)
     this.platform = platform;
+    this.platformAI = platformAI;
 
     // Original velocity
     this.originalVelocity = this.velocity.clone();
@@ -109,6 +110,28 @@ Ball.prototype = extend(new Entity(), {
 
             // Recompute the velocity
             actualVelocity = this.velocity.multiply(delta);
+        } else {
+            if (actualVelocity.y < 0
+                && this.getTopY() + actualVelocity.y <= this.platformAI.getBottomY()
+                && this.getLeftX() < this.platformAI.getRightX()
+                && this.getRightX() > this.platformAI.getLeftX()) {
+                var halfPlatform = this.platformAI.width / 2;
+                var platformCenter = this.platformAI.getLeftX() + halfPlatform;
+                var distance = Math.abs(this.position.x - platformCenter);
+
+                // Limit the rotation to 0.7 %
+                var percent = Math.min(0.7, distance / halfPlatform);
+                var rotation = 3 * half_pi;
+                if(this.position.x < platformCenter) {
+                    rotation -= percent * half_pi;
+                } else {
+                    rotation += percent * half_pi;
+                }
+                this.velocity = this.velocity.setRotation(-rotation);
+
+                // Recompute the velocity
+                actualVelocity = this.velocity.multiply(delta);
+            }
         }
 
         // TODO Don't just reverse the velocity. Bounce against the wall!
@@ -123,7 +146,12 @@ Ball.prototype = extend(new Entity(), {
         }
 
         if(this.getTopY() + actualVelocity.y < 0) {
-            this.velocity.y = Math.abs(this.velocity.y);
+            $pong.dispatchEvent(new Event('lifeAI_lost'));
+            this.position = new Point(w / 2, h / 5);
+            this.velocity = this.originalVelocity.setRotation(
+                Math.random() * 2 * Math.PI
+            );
+            this.initTimes(time);
         } else if(this.getBottomY() + actualVelocity.y > h) {
             $pong.dispatchEvent(new Event('life_lost'));
             this.position = new Point(w / 2, h / 5);

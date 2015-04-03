@@ -25,7 +25,9 @@ var $pong = document.getElementById('pong');
 var w = $pong.offsetWidth;
 var h = $pong.offsetHeight;
 var ctx = $pong.getContext('2d');
-var lifes = 3;
+var max_lifes = 3;
+var lifes = max_lifes;
+var lifesAI = max_lifes;
 var game_loop;
 
 // Add all properties of an object to another
@@ -53,19 +55,29 @@ window.addEventListener('load', function() { requirejs(
                 platformWidth,
                 platformHeight
             )
+            , platformAI = new Platform(
+                new Point(
+                    w / 2 - platformWidth / 2,
+                    0
+                ),
+                platformWidth,
+                platformHeight
+            )
             , ball = new Ball(
                 new Point(w / 2, h / 5),
                 new Vector(0.1, 0.3).setRotation(Math.random() * 2 * Math.PI),
                 ballRadius,
                 1.02,
                 600,
-                platform
+                platform,
+                platformAI
             )
             , timer = new Timer('rgba(255, 255, 255, 0.8)', '1.1rem sans-serif')
             , objects = [
                 ball,
                 platform,
-                timer
+                timer,
+                platformAI
             ]
             , sizeChangedHandler = function() {
                 if($pong.offsetWidth !== w) {
@@ -90,10 +102,22 @@ window.addEventListener('load', function() { requirejs(
                 var i;
                 ctx.beginPath();
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                for(i = 0; i < lifes; i++) {
+                for(i = 0; i < lifesAI; i++) {
                     ctx.arc(
                         w - 15,
                         22 * i + 15,
+                        7,
+                        0,
+                        2 * Math.PI
+                    );
+                }
+                ctx.fill();
+                ctx.beginPath();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                for(i = 0; i < lifes; i++) {
+                    ctx.arc(
+                        w - 15,
+                        h - (22 * max_lifes + 15) + 22 * i + 15,
                         7,
                         0,
                         2 * Math.PI
@@ -134,6 +158,17 @@ window.addEventListener('load', function() { requirejs(
             objects.forEach(function(object) {
                 object.update(e.detail, objects);
             });
+
+            var halfPlatform = platformAI.width / 2;
+            var platformCenter = platformAI.getLeftX() + halfPlatform;
+            var distance = Math.abs(ball.position.x - platformCenter);
+
+            if (platformAI.position.x + platformAI.width / 2 < ball.position.x) {
+                platformAI.move(platformCenter + distance*0.06);
+            } else {
+                platformAI.move(platformCenter - distance*0.06);
+                //platformAI.move(platformAI.position.x + platformAI.width / 2 - (((platformAI.position.x + platformAI.width/2) - ball.position.x)));
+            }
         });
 
         $pong.addEventListener('life_lost', function() {
@@ -142,11 +177,29 @@ window.addEventListener('load', function() { requirejs(
             }
         });
 
+        $pong.addEventListener('lifeAI_lost', function() {
+            if(lifesAI-- <= 0) {
+                $pong.dispatchEvent(new Event('game_won'));
+            }
+        });
+
         $pong.addEventListener('game_lost', function() {
             clearInterval(game_loop);
             console.log('YOU LOST BIATCH!');
             var text = new LostText(
                 'You lose!',
+                'rgba(255, 150, 150, 0.8)',
+                '2rem sans-serif'
+            );
+            objects.push(text);
+            text.draw(ctx);
+        });
+
+        $pong.addEventListener('game_won', function() {
+            clearInterval(game_loop);
+            console.log('YOU WON BIATCH!');
+            var text = new LostText(
+                'You win!',
                 'rgba(255, 150, 150, 0.8)',
                 '2rem sans-serif'
             );

@@ -14,6 +14,7 @@ var libs = [
     'libs/Entity',
     'libs/Ball',
     'libs/Platform',
+    'libs/PlatformAI',
     'libs/LostText',
     'libs/Timer'
 ];
@@ -55,13 +56,14 @@ window.addEventListener('load', function() { requirejs(
                 platformWidth,
                 platformHeight
             )
-            , platformAI = new Platform(
+            , platformAI = new PlatformAI(
                 new Point(
                     w / 2 - platformWidth / 2,
                     0
                 ),
                 platformWidth,
-                platformHeight
+                platformHeight,
+                ball
             )
             , ball = new Ball(
                 new Point(w / 2, h / 5),
@@ -126,7 +128,7 @@ window.addEventListener('load', function() { requirejs(
                 ctx.fill();
             }
             ;
-
+        platformAI.setBall(ball);
         $pong.width = w;
         $pong.height = h;
 
@@ -158,17 +160,6 @@ window.addEventListener('load', function() { requirejs(
             objects.forEach(function(object) {
                 object.update(e.detail, objects);
             });
-
-            var halfPlatform = platformAI.width / 2;
-            var platformCenter = platformAI.getLeftX() + halfPlatform;
-            var distance = Math.abs(ball.position.x - platformCenter);
-
-            if (platformAI.position.x + platformAI.width / 2 < ball.position.x) {
-                platformAI.move(platformCenter + distance*0.06);
-            } else {
-                platformAI.move(platformCenter - distance*0.06);
-                //platformAI.move(platformAI.position.x + platformAI.width / 2 - (((platformAI.position.x + platformAI.width/2) - ball.position.x)));
-            }
         });
 
         $pong.addEventListener('life_lost', function() {

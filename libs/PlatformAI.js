@@ -13,9 +13,9 @@ PlatformAI.prototype = extend(new Platform(), {
         var distance = Math.abs(this.ball.position.x - platformCenter);
 
         if (platformCenter < this.ball.position.x) {
-            this.move(platformCenter + distance*0.06);
+            this.move(platformCenter + distance*0.08);
         } else {
-            this.move(platformCenter - distance*0.06);
+            this.move(platformCenter - distance*0.08);
         }
     }
     , setBall: function(ball) {

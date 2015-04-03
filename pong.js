@@ -8,6 +8,7 @@ var half_pi = Math.PI / 2;
 var ballRadius = 15;
 var platformWidth = 150;
 var platformHeight = 15;
+var AISpeed = 0.5;
 var libs = [
     'libs/Vector',
     'libs/Point',
@@ -63,7 +64,8 @@ window.addEventListener('load', function() { requirejs(
                 ),
                 platformWidth,
                 platformHeight,
-                ball
+                ball,
+                AISpeed
             )
             , ball = new Ball(
                 new Point(w / 2, h / 5),

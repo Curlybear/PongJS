@@ -1,6 +1,7 @@
 "use strict";
 
-var Timer = function(style, font) {
+var Timer = function(position, style, font) {
+    Entity.call(this, position);
     this.style = style;
     this.font = font;
     this.start = 0;
@@ -15,15 +16,24 @@ var Timer = function(style, font) {
     $span.remove();
 };
 
-Timer.prototype = extend(new Entity(), {
+extend(Timer, Entity, {
     draw: function(ctx) {
-        ctx.font = this.font;
-        ctx.fillStyle = this.style;
         var dimensions = ctx.measureText('0');
+        ctx.font = this.font;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
         ctx.fillText(
             this.timer,
-            dimensions.width,
-            this.fontHeight
+            this.position.x + dimensions.width + 1,
+            this.position.y + this.fontHeight + 1
+        );
+
+        ctx.fillStyle = this.style;
+        ctx.fillText(
+            this.timer,
+            this.position.x + dimensions.width,
+            this.position.y + this.fontHeight
         );
     }
     , update: function(now) {

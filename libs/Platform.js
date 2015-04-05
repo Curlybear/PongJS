@@ -2,12 +2,13 @@
 
 // position: Point containing the top left corner position
 var Platform = function(position, width, height) {
-    this.position = position;
+    Entity.call(this, position);
+    SolidEntity.call(this);
     this.width = width;
     this.height = height;
 };
 
-Platform.prototype = extend(new Entity(), {
+extend(Platform, SolidEntity, {
     getLeftX: function() {
         return this.position.x;
     }
@@ -48,6 +49,17 @@ Platform.prototype = extend(new Entity(), {
     }
 
     , draw: function(ctx) {
+        // Shadow
+        ctx.beginPath();
+        ctx.rect(
+            this.position.x,
+            this.position.y,
+            this.width + 2,
+            this.height + 2
+        );
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fill();
+
         ctx.beginPath();
         ctx.rect(
             this.position.x,
@@ -57,6 +69,22 @@ Platform.prototype = extend(new Entity(), {
         );
         ctx.fillStyle = '#999';
         ctx.fill();
+    }
+    , handleCollision: function(ball, direction) {
+        // Set the velocity rotation based on where the ball hit the platform
+        var halfPlatform = this.width / 2;
+        var platformCenter = this.getLeftX() + halfPlatform;
+        var distance = Math.abs(ball.position.x - platformCenter);
+
+        // Limit the rotation to 0.7 %
+        var percent = Math.min(0.7, distance / halfPlatform);
+        var rotation = 3 * half_pi;
+        if(ball.position.x < platformCenter) {
+            rotation -= percent * half_pi;
+        } else {
+            rotation += percent * half_pi;
+        }
+        ball.velocity = ball.velocity.setRotation(rotation);
     }
 
     , containerWidthChanged: function(width) {

@@ -1,9 +1,14 @@
 "use strict";
 
+var isBetween = function(x, x1, x2) {
+    var xMin = Math.min(x1, x2)
+      , xMax = Math.max(x1, x2);
+    return x > xMin && x < xMax;
+}
+
 var Ball = function(position, velocity, radius,
-        velocityIncreaseRate, velocityIncreaseDelay, platform, platformAI) {
-    // Center of the ball
-    this.position = position;
+        velocityIncreaseRate, velocityIncreaseDelay) {
+    Entity.call(this, position)
     // Velocity of the ball (in unit per ms)
     this.velocity = velocity;
     // Radius of the ball
@@ -12,9 +17,6 @@ var Ball = function(position, velocity, radius,
     this.velocityIncreaseRate = velocityIncreaseRate;
     // Delay between velocity increase
     this.velocityIncreaseDelay = velocityIncreaseDelay;
-    // The plateforms (needed for collision handling)
-    this.platform = platform;
-    this.platformAI = platformAI;
 
     // Original velocity
     this.originalVelocity = this.velocity.clone();
@@ -27,31 +29,43 @@ var Ball = function(position, velocity, radius,
     this.previousFrame = 0;
 };
 
-Ball.prototype = extend(new Entity(), {
+extend(Ball, Entity, {
     // Get bounds of the ball
-    getLeftX:   function() { return this.position.x - this.radius; },
-    getRightX:  function() { return this.position.x + this.radius; },
-    getTopY:    function() { return this.position.y - this.radius; },
-    getBottomY: function() { return this.position.y + this.radius; },
+    getLeftX:   function() { return this.position.x - this.radius; }
+    , getRightX:  function() { return this.position.x + this.radius; }
+    , getTopY:    function() { return this.position.y - this.radius; }
+    , getBottomY: function() { return this.position.y + this.radius; }
 
-    setLeftX: function(x) {
+    , setLeftX: function(x) {
         this.position.x  = x + this.radius;
         return this;
-    },
-    setRightX: function(x) {
+    }
+    , setRightX: function(x) {
         this.position.x = x - this.radius;
         return this;
-    },
-    setTopY: function(y) {
+    }
+    , setTopY: function(y) {
         this.position.y = y + this.radius;
         return this;
-    },
-    setBottomY: function(y) {
+    }
+    , setBottomY: function(y) {
         this.position.y = y - this.radius;
         return this;
-    },
+    }
 
-    draw: function(ctx) {
+    , draw: function(ctx) {
+        // Shadow
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.arc(
+            this.position.x + 1,
+            this.position.y + 1,
+            this.radius + 1,
+            0,
+            2 * Math.PI
+        );
+        ctx.fill();
+
         ctx.beginPath();
         ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         ctx.arc(
@@ -62,15 +76,15 @@ Ball.prototype = extend(new Entity(), {
             2 * Math.PI
         );
         ctx.fill();
-    },
+    }
 
-    initTimes: function(time) {
+    , initTimes: function(time) {
         this.firstFrame = time;
         this.lastVelocityIncrease = time;
         this.previousFrame = time;
-    },
+    }
 
-    update: function(time, objects) {
+    , update: function(time, objects) {
         // First time we only get the time (used to compute next deltas)
         if(!this.previousFrame) {
             this.initTimes(time);
@@ -88,89 +102,101 @@ Ball.prototype = extend(new Entity(), {
 
         var actualVelocity = this.velocity.multiply(delta);
 
-        // Collision with the plateform
-        if(actualVelocity.y > 0
-                && this.getBottomY() + actualVelocity.y >= this.platform.getTopY()
-                && this.getLeftX() < this.platform.getRightX()
-                && this.getRightX() > this.platform.getLeftX()) {
-            // Set the velocity rotation based on where the ball hit the platform
-            var halfPlatform = this.platform.width / 2;
-            var platformCenter = this.platform.getLeftX() + halfPlatform;
-            var distance = Math.abs(this.position.x - platformCenter);
-
-            // Limit the rotation to 0.7 %
-            var percent = Math.min(0.7, distance / halfPlatform);
-            var rotation = 3 * half_pi;
-            if(this.position.x < platformCenter) {
-                rotation -= percent * half_pi;
-            } else {
-                rotation += percent * half_pi;
+        var goingUp = this.velocity.y < 0;
+        var goingLeft = this.velocity.x < 0;
+        var self = this;
+        objects.forEach(function(obj) {
+            if(obj == self || !obj.solid) {
+                // Don't handle collision with yourself or non solid objects
+                return;
             }
-            this.velocity = this.velocity.setRotation(rotation);
+
+            // Horizontal collision
+            if(goingLeft
+                    // Will pass the object in this frame
+                    && isBetween(
+                        obj.getRightX(),
+                        self.getLeftX(),
+                        self.getLeftX() + actualVelocity.x
+                    )
+                    // Will actually go through
+                    && self.getBottomY() > obj.getTopY()
+                    && self.getTopY() < obj.getBottomY()) {
+                obj.handleCollision(self, Direction.Left);
+            } else if(!goingLeft
+                    // Will pass the object in this frame
+                    && isBetween(
+                        obj.getLeftX(),
+                        self.getRightX(),
+                        self.getRightX() + actualVelocity.x
+                    )
+                    // Will actually go through
+                    && self.getBottomY() > obj.getTopY()
+                    && self.getTopY() < obj.getBottomY()) {
+                obj.handleCollision(self, Direction.Right);
+            }
+
+            // Vertical collision
+            if(goingUp
+                    // Will pass the object in this frame
+                    && isBetween(
+                        obj.getBottomY(),
+                        self.getTopY(),
+                        self.getTopY() + actualVelocity.y
+                    )
+                    // Will actually go through
+                    && self.getRightX() > obj.getLeftX()
+                    && self.getLeftX() < obj.getRightX()) {
+                obj.handleCollision(self, Direction.Up);
+            } else if(!goingUp
+                    // Will pass the object in this frame
+                    && isBetween(
+                        obj.getTopY(),
+                        self.getBottomY(),
+                        self.getBottomY() + actualVelocity.y
+                    )
+                    // Will actually go through
+                    && self.getRightX() > obj.getLeftX()
+                    && self.getLeftX() < obj.getRightX()) {
+                obj.handleCollision(self, Direction.Down);
+            }
 
             // Recompute the velocity
-            actualVelocity = this.velocity.multiply(delta);
-        } else {
-            if (actualVelocity.y < 0
-                && this.getTopY() + actualVelocity.y <= this.platformAI.getBottomY()
-                && this.getLeftX() < this.platformAI.getRightX()
-                && this.getRightX() > this.platformAI.getLeftX()) {
-                var halfPlatform = this.platformAI.width / 2;
-                var platformCenter = this.platformAI.getLeftX() + halfPlatform;
-                var distance = Math.abs(this.position.x - platformCenter);
+            actualVelocity = self.velocity.multiply(delta);
+        });
 
-                // Limit the rotation to 0.7 %
-                var percent = Math.min(0.7, distance / halfPlatform);
-                var rotation = 3 * half_pi;
-                if(this.position.x < platformCenter) {
-                    rotation -= percent * half_pi;
-                } else {
-                    rotation += percent * half_pi;
-                }
-                this.velocity = this.velocity.setRotation(-rotation);
-
-                // Recompute the velocity
-                actualVelocity = this.velocity.multiply(delta);
-            }
-        }
-
-        // TODO Don't just reverse the velocity. Bounce against the wall!
-        // -------
-        //   /\
-        //  /  o
-        // /
-        if(this.getLeftX() + actualVelocity.x < 0) {
-            this.velocity.x = Math.abs(this.velocity.x);
-        } else if(this.getRightX() + actualVelocity.x > w) {
-            this.velocity.x = -Math.abs(this.velocity.x);
-        }
-
-        if(this.getTopY() + actualVelocity.y < 0) {
-            $pong.dispatchEvent(new Event('lifeAI_lost'));
-            this.position = new Point(w / 2, h / 5);
-            this.velocity = this.originalVelocity.setRotation(
-                Math.random() * 2 * Math.PI
-            );
-            this.initTimes(time);
-        } else if(this.getBottomY() + actualVelocity.y > h) {
+        if(this.getBottomY() + actualVelocity.y > h) {
             $pong.dispatchEvent(new Event('life_lost'));
             this.position = new Point(w / 2, h / 5);
-            this.velocity = this.originalVelocity.setRotation(
-                Math.random() * 2 * Math.PI
-            );
+
+            var rotation = random(Math.PI / 4, 3 / 4 * Math.PI);
+            if(Math.random() > 0.5) {
+                rotation = -rotation;
+            }
+            this.velocity = this.originalVelocity.setRotation(rotation);
+            this.initTimes(time);
+        } else if(this.getTopY() + actualVelocity.y < 0) {
+            $pong.dispatchEvent(new Event('lifeAI_lost'));
+            this.position = new Point(w / 2, h / 5);
+
+            var rotation = random(Math.PI / 4, 3 / 4 * Math.PI);
+            if(Math.random() > 0.5) {
+                rotation = -rotation;
+            }
+            this.velocity = this.originalVelocity.setRotation(rotation);
             this.initTimes(time);
         }
 
         this.position.add(actualVelocity);
-    },
+    }
 
-    containerWidthChanged: function(width) {
+    , containerWidthChanged: function(width) {
         if(this.getRightX() > width) {
             this.setRightX(width);
         }
-    },
+    }
 
-    containerHeightChanged: function(height) {
+    , containerHeightChanged: function(height) {
         if(this.getBottomY() > height) {
             this.setBottomY(height);
         }

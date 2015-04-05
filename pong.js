@@ -113,12 +113,12 @@ window.addEventListener('load', function() { requirejs(libs, function() {
         '1.1rem sans-serif'
     );
     var lifeCounter = new LifeCounter(
-        new Point(w - 15, 15),
+        new Point(w - 15, h - 15),
         lifes,
-        22
+        -22
     );
     var lifeAICounter = new LifeCounter(
-        new Point(w - 15, h - 55),
+        new Point(w - 15, 15),
         lifes,
         22
     );

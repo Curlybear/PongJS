@@ -37,4 +37,8 @@ extend(LifeCounter, Entity, {
         }
         ctx.fill();
     }
+    , containerWidthChanged: function(width) {
+        this.position.x = width - 15;
+    }
+    //TODO Height change :<
 });

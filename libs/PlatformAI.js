@@ -35,4 +35,7 @@ extend(PlatformAI, Platform, {
         }
         ball.velocity = ball.velocity.setRotation(-rotation);
     }
+    , containerHeightChanged: function(height) {
+        this.setTopY(5);
+    }
 });

@@ -101,7 +101,7 @@ window.addEventListener('load', function() { requirejs(libs, function() {
         600
     );
     var platformAI = new PlatformAI(
-        new Point(w / 2 - platformWidth / 2, 0),
+        new Point(w / 2 - platformWidth / 2, 5),
         platformWidth,
         platformHeight,
         ball,
